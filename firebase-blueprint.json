@@ -1,0 +1,155 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "Registered user profile details",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "description": "Firebase UID of the user" },
+        "name": { "type": "string", "description": "Display name of the user" },
+        "email": { "type": "string", "format": "email", "description": "User email address" },
+        "profilePhoto": { "type": "string", "description": "User profile photo URL" },
+        "role": { "type": "string", "enum": ["user", "admin"], "description": "User role in the application" },
+        "isBlocked": { "type": "boolean", "description": "Whether the user is blocked from interactions" },
+        "visitCount": { "type": "number", "description": "Number of times the user has visited" },
+        "lastActive": { "type": "string", "format": "date-time", "description": "Last activity timestamp" },
+        "bio": { "type": "string", "description": "The user's thoughts about themselves" },
+        "relationship": { "type": "string", "description": "Relationship or connection context to Sanvi" },
+        "favoriteChapter": { "type": "string", "description": "Favorite story category or chapter" },
+        "hobbies": { "type": "string", "description": "User hobbies or creative pursuits" },
+        "introduction": { "type": "string", "description": "An introductory sentence" }
+      },
+      "required": ["uid", "name", "email", "role", "isBlocked", "visitCount"]
+    },
+    "Chapter": {
+      "title": "Chapter",
+      "description": "Story chapter for grouping posts",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "description": "Name of the chapter" },
+        "icon": { "type": "string", "description": "Lucide icon name" },
+        "description": { "type": "string", "description": "Short description of the chapter" },
+        "color": { "type": "string", "description": "CSS background class for the card" },
+        "order": { "type": "number", "description": "Display order" }
+      },
+      "required": ["name", "icon"]
+    },
+    "Category": {
+      "title": "Category",
+      "description": "Story category for grouping posts",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "description": "Name of the category" },
+        "icon": { "type": "string", "description": "Lucide icon name" },
+        "description": { "type": "string", "description": "Short description of the category" },
+        "color": { "type": "string", "description": "CSS background class for the card" },
+        "order": { "type": "number", "description": "Display order" }
+      },
+      "required": ["name", "icon"]
+    },
+    "Post": {
+      "title": "Post",
+      "description": "A story post created by the storyteller",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string", "description": "Title of the story" },
+        "content": { "type": "string", "description": "Text content of the story" },
+        "authorId": { "type": "string", "description": "UID of the author" },
+        "authorName": { "type": "string", "description": "Name of the author" },
+        "category": { "type": "string", "description": "Name of the category" },
+        "imageUrl": { "type": "string", "description": "URL of the story image" },
+        "likesCount": { "type": "number", "description": "Total number of likes" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Creation timestamp" }
+      },
+      "required": ["title", "content", "authorId", "category", "authorName", "likesCount", "createdAt"]
+    },
+    "Comment": {
+      "title": "Comment",
+      "description": "User comment on a story post",
+      "type": "object",
+      "properties": {
+        "postId": { "type": "string", "description": "ID of the associated post" },
+        "authorId": { "type": "string", "description": "UID of the commenting user" },
+        "authorName": { "type": "string", "description": "Name of the commenting user" },
+        "authorPhoto": { "type": "string", "description": "Photo of the commenting user" },
+        "content": { "type": "string", "description": "Text content of the comment" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Creation timestamp" }
+      },
+      "required": ["postId", "authorId", "content", "createdAt"]
+    },
+    "Like": {
+      "title": "Like",
+      "description": "A user like on a post",
+      "type": "object",
+      "properties": {
+         "userId": { "type": "string" },
+         "postId": { "type": "string" },
+         "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "postId"]
+    },
+    "AiMemory": {
+      "title": "AiMemory",
+      "description": "A piece of structured memory or persona knowledge about Sanvi",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "category": { "type": "string" },
+        "title": { "type": "string" },
+        "content": { "type": "string" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["category", "title", "content", "updatedAt"]
+    },
+    "SiteSettings": {
+      "title": "SiteSettings",
+      "description": "Customizable homepage text, bio, and hero headers",
+      "type": "object",
+      "properties": {
+        "heroTitle": { "type": "string" },
+        "heroSubtitle": { "type": "string" },
+        "heroBio": { "type": "string" },
+        "heroTag": { "type": "string" },
+        "aboutBio": { "type": "string" },
+        "quote": { "type": "string" },
+        "primaryButtonText": { "type": "string" },
+        "secondaryButtonText": { "type": "string" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      }
+    }
+  },
+  "firestore": {
+    "/site_settings/{settingId}": {
+      "schema": "SiteSettings",
+      "description": "Site-wide configuration and homepage copy"
+    },
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "User profiles indexed by UID"
+    },
+    "/chapters/{chapterId}": {
+      "schema": "Chapter",
+      "description": "List of available story chapters"
+    },
+    "/categories/{categoryId}": {
+      "schema": "Category",
+      "description": "List of available story categories"
+    },
+    "/posts/{postId}": {
+      "schema": "Post",
+      "description": "Story posts"
+    },
+    "/comments/{commentId}": {
+      "schema": "Comment",
+      "description": "Individual comments on posts"
+    },
+    "/likes/{userId_postId}": {
+      "schema": "Like",
+      "description": "Atomic like tracking to prevent duplicate likes"
+    },
+    "/ai_memory/{memoryId}": {
+      "schema": "AiMemory",
+      "description": "Sanvi's personal memories and AI training nodes"
+    }
+  }
+}

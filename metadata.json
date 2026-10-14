@@ -1,0 +1,8 @@
+{
+  "name": "ShreeVerse",
+  "description": "A comprehensive professional academic portfolio, research showcase, and career development hub for high school, university admissions, and future academic milestones.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

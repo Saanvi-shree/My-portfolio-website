@@ -1,0 +1,234 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // 0. Global Safety Net: Default Deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Helper Functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    // Admin Helper (Hardened)
+    function isAdmin() {
+      return isSignedIn() && (
+        request.auth.token.email == 'nrpavithrarao@gmail.com' ||
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
+         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin')
+      );
+    }
+
+    // Helper to check if current user is blocked
+    function isBlocked() {
+      return exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isBlocked == true;
+    }
+
+    // 1. Users Collection
+    match /users/{userId} {
+      function isValidUser(data) {
+        return data.uid == userId &&
+               data.name is string && data.name.size() > 0 && data.name.size() <= 100 &&
+               data.email is string && data.email.size() >= 0 && data.email.size() <= 200 &&
+               (data.profilePhoto == null || data.profilePhoto == '' || (data.profilePhoto is string && data.profilePhoto.size() <= 1000)) &&
+               data.role in ['user', 'admin'] &&
+               data.isBlocked is bool &&
+               data.visitCount is number &&
+               data.lastActive is timestamp &&
+               (!('phone' in data) || data.phone is string) &&
+               (!('createdAt' in data) || data.createdAt is timestamp) &&
+               (!('username' in data) || (data.username is string && data.username.size() >= 0 && data.username.size() <= 100)) &&
+               (!('isNewUser' in data) || data.isNewUser is bool) &&
+               (!('bio' in data) || (data.bio is string && data.bio.size() <= 1000)) &&
+               (!('relationship' in data) || (data.relationship is string && data.relationship.size() <= 200)) &&
+               (!('favoriteChapter' in data) || (data.favoriteChapter is string && data.favoriteChapter.size() <= 200)) &&
+               (!('hobbies' in data) || (data.hobbies is string && data.hobbies.size() <= 500)) &&
+               (!('introduction' in data) || (data.introduction is string && data.introduction.size() <= 1000));
+      }
+
+      allow get: if isSignedIn();
+      allow list: if isAdmin();
+      allow create: if isOwner(userId) && isValidUser(incoming()) && 
+                       (incoming().email == '' || incoming().email == request.auth.token.email) &&
+                       incoming().role == 'user' && 
+                       incoming().isBlocked == false &&
+                       incoming().visitCount == 1 &&
+                       incoming().lastActive == request.time;
+      allow update: if isOwner(userId) && isValidUser(incoming()) &&
+                       incoming().uid == userId &&
+                       incoming().email == existing().email &&
+                       (isAdmin() || (
+                         !isBlocked() &&
+                         incoming().role == existing().role &&
+                         incoming().isBlocked == existing().isBlocked &&
+                         incoming().lastActive == request.time &&
+                         incoming().diff(existing()).affectedKeys().hasOnly([
+                           'visitCount', 'name', 'username', 'profilePhoto', 'lastActive', 'uid', 'isNewUser',
+                           'bio', 'relationship', 'favoriteChapter', 'hobbies', 'introduction'
+                         ])
+                       ));
+    }
+
+    // 2. Categories and Chapters
+    match /categories/{categoryId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /chapters/{chapterId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // 5. Test Collection (for connection verification)
+    match /test/{docId} {
+      allow read: if true;
+    }
+
+    // 3. Posts
+    match /posts/{postId} {
+      function isValidPost(data) {
+        return data.title is string && data.title.size() > 0 && data.title.size() <= 500 &&
+               data.content is string && data.content.size() > 0 &&
+               data.authorId is string &&
+               data.authorName is string &&
+               data.category is string &&
+               (data.imageUrl == null || (data.imageUrl is string && data.imageUrl.size() <= 2000)) &&
+               data.likesCount is number &&
+               data.createdAt is timestamp &&
+               (!('featured' in data) || data.featured is bool);
+      }
+
+      allow read: if true;
+      allow create: if (isAdmin() || (isSignedIn() && !isBlocked())) && isValidPost(incoming()) &&
+                       incoming().authorId == request.auth.uid &&
+                       incoming().createdAt == request.time;
+      allow update: if (
+                        (isAdmin() || (
+                          isSignedIn() && !isBlocked() && 
+                          existing().authorId == request.auth.uid && 
+                          incoming().get('featured', false) == existing().get('featured', false)
+                        )) && 
+                        isValidPost(incoming()) &&
+                        incoming().authorId == existing().authorId &&
+                        incoming().createdAt == existing().createdAt
+                      ) || (
+                        isSignedIn() && !isBlocked() &&
+                        incoming().diff(existing()).affectedKeys().hasOnly(['likesCount']) &&
+                        isValidPost(incoming())
+                      );
+      allow delete: if isAdmin() || (isSignedIn() && existing().authorId == request.auth.uid);
+    }
+
+    // 4. Comments
+    match /comments/{commentId} {
+      // ... (isValidComment remains same)
+      function isValidComment(data) {
+        return data.postId is string &&
+               data.authorId is string &&
+               data.authorName is string &&
+               (data.authorPhoto == '' || (data.authorPhoto is string && data.authorPhoto.size() <= 1000)) &&
+               data.content is string && data.content.size() > 0 && data.content.size() <= 2000 &&
+               data.createdAt is timestamp;
+      }
+
+      allow read: if true;
+      allow create: if isSignedIn() && !isBlocked() && isValidComment(incoming()) && 
+                       incoming().authorId == request.auth.uid &&
+                       incoming().createdAt == request.time &&
+                       (exists(/databases/$(database)/documents/posts/$(incoming().postId)) || exists(/databases/$(database)/documents/stories/$(incoming().postId)));
+      
+      allow update, delete: if isSignedIn() && (existing().authorId == request.auth.uid || isAdmin());
+    }
+
+    // 6. Likes
+    match /likes/{likeId} {
+      function isValidLike(data) {
+        return data.userId == request.auth.uid &&
+               data.postId is string &&
+               (exists(/databases/$(database)/documents/posts/$(data.postId)) || exists(/databases/$(database)/documents/stories/$(data.postId)));
+      }
+      allow read: if true;
+      allow create: if isSignedIn() && isValidLike(incoming()) && likeId == request.auth.uid + '_' + incoming().postId;
+      allow delete: if isSignedIn() && likeId.startsWith(request.auth.uid + '_');
+    }
+
+    // 7. AI Memory Collection
+    match /ai_memory/{memoryId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // 8. Stories Collection
+    match /stories/{postId} {
+      function isValidStory(data) {
+        return data.title is string && data.title.size() > 0 && data.title.size() <= 500 &&
+               data.content is string && data.content.size() > 0 &&
+               data.authorId is string &&
+               data.authorName is string &&
+               data.category is string &&
+               (data.imageUrl == null || (data.imageUrl is string && data.imageUrl.size() <= 2000)) &&
+               data.likesCount is number &&
+               data.createdAt is timestamp &&
+               (!('featured' in data) || data.featured is bool);
+      }
+
+      allow read: if true;
+      allow create: if (isAdmin() || (isSignedIn() && !isBlocked())) && isValidStory(incoming()) &&
+                       incoming().authorId == request.auth.uid &&
+                       incoming().createdAt == request.time;
+      allow update: if (
+                        (isAdmin() || (
+                          isSignedIn() && !isBlocked() && 
+                          existing().authorId == request.auth.uid && 
+                          incoming().get('featured', false) == existing().get('featured', false)
+                        )) && 
+                        isValidStory(incoming()) &&
+                        incoming().authorId == existing().authorId &&
+                        incoming().createdAt == existing().createdAt
+                      ) || (
+                        isSignedIn() && !isBlocked() &&
+                        incoming().diff(existing()).affectedKeys().hasOnly(['likesCount']) &&
+                        isValidStory(incoming())
+                      );
+      allow delete: if isAdmin() || (isSignedIn() && existing().authorId == request.auth.uid);
+    }
+
+    // 9. Knowledge Base Collection
+    match /knowledge_base/{memoryId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // 10. FAQ Collection
+    match /faq/{faqId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // 11. Site Settings Collection (Home text & bio customizer)
+    match /site_settings/{settingId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+  }
+}

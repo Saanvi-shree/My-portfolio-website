@@ -1,0 +1,92 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-serif: "Playfair Display", Georgia, serif;
+  
+  --color-cream: #FDFBF7;
+  --color-lavender: #9587B3;
+  --color-lavender-light: #F3F1F8;
+  --color-charcoal: #333333;
+  --color-gold: #C5A059;
+  --color-ink: #1A1A1A;
+  --color-border: #E8E2D9;
+  
+  --color-white: #FFFFFF;
+}
+
+@layer base {
+  body {
+    @apply bg-cream text-charcoal font-sans leading-relaxed;
+  }
+  
+  h1, h2, h3, h4 {
+    @apply font-serif text-ink;
+  }
+}
+
+/* Typography & Layout */
+.text-serif { @apply font-serif; }
+.tracking-relaxed { @apply tracking-wide; }
+
+/* Components */
+.auth-container {
+  @apply max-w-md mx-auto mt-20 p-10 bg-white rounded-2xl shadow-sm border border-border;
+}
+
+.sidebar {
+  @apply w-[280px] h-screen fixed left-0 top-0 bg-white border-r border-border p-8 hidden lg:block overflow-y-auto z-30 transition-transform duration-300;
+}
+
+.mobile-nav {
+  @apply lg:hidden fixed bottom-0 left-0 right-0 h-16 bg-white border-t border-border flex items-center justify-around px-4 z-40 shadow-lg;
+}
+
+.main-content {
+  @apply flex-1 p-6 md:p-12 max-w-full pb-24 lg:pb-12;
+}
+
+.post-card {
+  @apply bg-white p-8 rounded-2xl border border-border shadow-sm transition-all duration-300 hover:shadow-md hover:-translate-y-1 mb-8;
+}
+
+.premium-btn {
+  @apply bg-ink text-white px-6 py-3 rounded-full font-medium transition-all duration-300 hover:bg-charcoal active:scale-95 flex items-center justify-center gap-3 shadow-sm;
+}
+
+.secondary-btn {
+  @apply bg-lavender-light text-lavender px-6 py-3 rounded-full font-medium transition-all duration-300 hover:bg-lavender hover:text-white flex items-center justify-center gap-3;
+}
+
+.input-field {
+  @apply w-full p-4 rounded-xl border border-border focus:outline-none focus:ring-1 focus:ring-lavender bg-cream/50 text-base transition-all;
+}
+
+.tag {
+  @apply px-3 py-1 bg-lavender-light text-lavender text-[12px] font-bold uppercase tracking-wider rounded-full;
+}
+
+.user-badge {
+  @apply w-10 h-10 bg-lavender text-white rounded-full flex items-center justify-center text-sm font-bold shadow-sm;
+}
+
+.category-section-card {
+  @apply relative overflow-hidden rounded-2xl aspect-[4/3] group cursor-pointer border border-border;
+}
+
+.category-overlay {
+  @apply absolute inset-0 bg-gradient-to-t from-ink/80 via-ink/20 to-transparent flex flex-col justify-end p-6 transition-opacity duration-300;
+}
+
+.category-icon-circle {
+  @apply w-12 h-12 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center mb-3 group-hover:scale-110 transition-transform;
+}
+
+/* Animations */
+.fade-in { animation: fadeIn 0.8s ease-out; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+/* Empty States */
+.empty-state {
+  @apply flex flex-col items-center justify-center py-20 px-8 text-center bg-cream/30 rounded-3xl border border-dashed border-border;
+}
